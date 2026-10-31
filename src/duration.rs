@@ -38,7 +38,6 @@
 /*
  * Rust port of JSR-310 by Alec Clawson
  */
-
 use serde::{Deserialize, Serialize};
 
 /// A time-based amount of time, such as '34.5 seconds'.
@@ -77,4 +76,78 @@ pub struct Duration
 {
     seconds: i64,
     nanos:   u32,
+}
+
+impl Duration
+{
+    pub const ZERO: Self = Self { seconds: 0, nanos: 0 };
+
+    pub const fn of_seconds(seconds: i64) -> Self
+    {
+        Self::create_(seconds, 0)
+    }
+
+    pub const fn of_seconds_adj(seconds: i64, nanos: u32) -> Option<Self>
+    {
+        let secs = seconds.checked_add(nanos.div_euclid(1_000_000_000) as i64);
+
+        if secs.is_none() { return None; }
+
+        let nos = nanos.rem_euclid(1_000_000_000);
+
+        Some(Self::create_(secs.unwrap(), nos))
+    }
+
+    pub const fn of_nanos(nanos: i64) -> Self
+    {
+        let mut secs = nanos.div_euclid(1_000_000_000);
+        let mut nos = nanos.rem_euclid(1_000_000_000) as i32;
+
+        if nos < 0
+        {
+            nos += 1_000_000_000;
+            secs -= 1;
+        }
+
+        Self::create_(secs, nos.cast_unsigned())
+    }
+
+    pub const unsafe fn new_unchecked(seconds: i64, nanos: u32) -> Self
+    {
+        Self::create_(seconds, nanos)
+    }
+
+    pub const fn is_positive(&self) -> bool
+    {
+        (self.seconds | (self.nanos as i64)) > 0
+    }
+
+    pub const fn is_zero(&self) -> bool
+    {
+        (self.seconds | (self.nanos as i64)) == 0
+    }
+
+    pub const fn is_negative(&self) -> bool
+    {
+        self.seconds < 0
+    }
+
+    pub const fn seconds(&self) -> i64 { self.seconds }
+
+    pub const fn nanos(&self) -> u32 { self.nanos }
+
+    pub const fn with_seconds(self, seconds: i64) -> Self
+    {
+        Self::create_(seconds, self.nanos)
+    }
+
+    pub const fn with_nanos(self, nanos: u32) -> Option<Self>
+    {
+        todo!()
+    }
+
+    const fn create_(seconds: i64, nanos: u32) -> Self
+    {
+        Self { seconds, nanos }
+    }
 }
